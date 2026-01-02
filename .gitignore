@@ -1,0 +1,38 @@
+# Compiled Python files
+*.pyc
+__pycache__/
+
+# Virtual environments
+venv/
+.env
+.env/
+env/
+ENV/
+
+# Local configuration files
+*.env
+*.ini
+*.cfg
+
+# Cache and temporary files
+.DS_Store
+*.swp
+*.swo
+*.log
+*.tmp
+
+# Backup files
+*~
+*.bak
+
+# Dependency files (if using pip)
+Pipfile.lock
+
+# Project-specific data or cache directories
+data/
+cache/
+*.db
+
+# PyCharm-specific files and directories
+.idea/
+*.iml
