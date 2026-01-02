@@ -25,7 +25,7 @@ class BaseQLearningManager:
         q_table_serializable = {k: v.tolist() for k, v in self.q_table.items()}
         with open(self.save_file, 'w') as f:
             json.dump(q_table_serializable, f)
-        print(f"Q-table saved to {self.save_file}")
+        #print(f"Q-table saved to {self.save_file}")
 
     def load_q_table(self):
         if os.path.exists(self.save_file):
@@ -75,6 +75,7 @@ class ProductionManager(BaseQLearningManager):
         self.clips_history = [0, 0]
         self.production_reward_history = 0
         self.max_history = 10
+        self.last_action = "wait"
 
     def get_state(self):
         """Returns a discretized state for production management"""
@@ -91,12 +92,23 @@ class ProductionManager(BaseQLearningManager):
 
         return f"prod_clips_{clips_state}_auto_{autoclippers_state}_mega_{megalippers_state}_rate_{rate_state}"
 
+    def can_buy_clipper(self):
+        """return true when the IA can afford to buy a clipper without risking wire shortage"""
+        funds = self.info_collector.get_funds()
+        wire_cost = self.info_collector.get_wire_cost()
+        clippers_cost = self.info_collector.get_autoclippers_cost()
+        if funds - clippers_cost < wire_cost:
+            return False
+        return True
+
     def get_reward(self):
         """Calculates reward based on production metrics"""
         clips = self.info_collector.get_clips_count()
         autoclippers = self.info_collector.get_autoclippers_count()
         megalippers = self.info_collector.get_megalippers_count()
         clip_maker_rate = self.info_collector.get_clip_maker_rate()
+
+        penalities = 0
 
         # Update histories
         self.clips_history.append(clips)
@@ -119,10 +131,15 @@ class ProductionManager(BaseQLearningManager):
             trend = (self.clips_history[-1] - self.clips_history[0]) / len(self.clips_history)
             trend_reward = trend * 0.1
 
-        return immediate_reward + production_reward + trend_reward
+        # Pénality when the last action was to buy a clipper but the funds is not enough
+        if (self.last_action == "btnMakeClipper" or self.last_action == "btnMakeMegaClipper") and not self.can_buy_clipper():
+            penalities -= 10
+
+        return immediate_reward + production_reward + trend_reward + penalities
 
     def execute_action(self, action):
         """Executes a production-related action"""
+        self.last_action = action
         if action == "wait":
             return True
         return self.button_manager.click_button_by_id(action)
@@ -281,10 +298,7 @@ class PriceManager(BaseQLearningManager):
 
         # Reward for high demand
         if isinstance(demand, (int, float)):
-            if demand > 8:
-                reward += 10
-            elif demand > 5:
-                reward += 5
+            reward = (demand-50) /10
 
         # Reward for increasing funds
         if len(self.price_history) >= 2:
@@ -326,9 +340,9 @@ class PaperclipsOptimizer:
         """Runs the optimization loop for all managers"""
         for i in range(episodes):
             # Run each manager
-            self.production_manager.run(episodes=1, save_every=episodes)
-            self.resource_manager.run(episodes=1, save_every=episodes)
-            self.price_manager.run(episodes=1, save_every=episodes)
+            self.production_manager.run(episodes=i, save_every=episodes)
+            self.resource_manager.run(episodes=i, save_every=episodes)
+            self.price_manager.run(episodes=i, save_every=episodes)
 
             # Print progress
             if (i + 1) % 100 == 0:

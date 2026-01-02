@@ -137,6 +137,19 @@ class PaperclipsInfoCollector:
             print(f"Unable to retrieve the number of auto clippers: {e}")
             return 0
 
+    def get_autoclippers_cost(self):
+        try:
+            elements = self.driver.find_elements(By.ID, "clipperCost")
+            if len(elements) == 0:
+                return 0  # No element found
+            else:
+                element = elements[0]  # Takes the first element
+                text = element.text.strip()  # Cleans the text
+                return text_to_number(text) if text else 0  # Converts or returns 0 if empty
+        except Exception as e:
+            print(f"Unable to retrieve the cost of a clipper: {e}")
+            return 0
+
     def get_megalippers_count(self):
         try:
             elements = self.driver.find_elements(By.ID, "megaClipperLevel")
