@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import queue
+import time
 
 class PaperclipsGUI:
     def __init__(self, optimizer):

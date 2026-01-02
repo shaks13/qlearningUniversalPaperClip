@@ -4,9 +4,12 @@ import time
 import json
 import os
 from collections import defaultdict
+from gui import PaperclipsGUI
+from infoCollector import text_to_number
 
 class BaseQLearningManager:
     """Base class for Q-Learning managers with common functionality"""
+
     def __init__(self, button_manager, info_collector, learning_rate=0.1, discount_factor=0.9,
                  exploration_rate=1.0, min_exploration_rate=0.01, exploration_decay=0.995,
                  save_file="data/q_table.json"):
@@ -25,14 +28,14 @@ class BaseQLearningManager:
         q_table_serializable = {k: v.tolist() for k, v in self.q_table.items()}
         with open(self.save_file, 'w') as f:
             json.dump(q_table_serializable, f)
-        #print(f"Q-table saved to {self.save_file}")
+        # print(f"Q-table saved to {self.save_file}")
 
     def load_q_table(self):
         if os.path.exists(self.save_file):
             with open(self.save_file, 'r') as f:
                 q_table_serializable = json.load(f)
                 self.q_table = defaultdict(lambda: np.zeros(len(self.possible_actions)),
-                                          {k: np.array(v) for k, v in q_table_serializable.items()})
+                                           {k: np.array(v) for k, v in q_table_serializable.items()})
             print(f"Q-table loaded from {self.save_file}")
         else:
             print("No saved Q-table found, initializing a new one.")
@@ -61,8 +64,10 @@ class BaseQLearningManager:
             best_action = self.possible_actions[best_action_idx]
             print(f"State {state} : Best action = {best_action} (Q={self.q_table[state][best_action_idx]:.2f})")
 
+
 class ProductionManager(BaseQLearningManager):
     """Manages paperclip and clipper production using Q-Learning"""
+
     def __init__(self, button_manager, info_collector, **kwargs):
         self.possible_actions = [
             "btnMakePaperclip",
@@ -132,7 +137,8 @@ class ProductionManager(BaseQLearningManager):
             trend_reward = trend * 0.1
 
         # Pénality when the last action was to buy a clipper but the funds is not enough
-        if (self.last_action == "btnMakeClipper" or self.last_action == "btnMakeMegaClipper") and not self.can_buy_clipper():
+        if (
+                self.last_action == "btnMakeClipper" or self.last_action == "btnMakeMegaClipper") and not self.can_buy_clipper():
             penalities -= 10
 
         return immediate_reward + production_reward + trend_reward + penalities
@@ -143,6 +149,26 @@ class ProductionManager(BaseQLearningManager):
         if action == "wait":
             return True
         return self.button_manager.click_button_by_id(action)
+
+    def get_production_stats(self):
+        """Returns current production statistics for GUI display."""
+        try:
+            stats = {
+                'clips': self.info_collector.get_clips_count(),
+                'clippers': self.info_collector.get_autoclippers_count(),
+                'mega_clippers': self.info_collector.get_megalippers_count(),
+                'production_rate': self.info_collector.get_clip_maker_rate()
+            }
+            # Convert all values to integers for cleaner display
+            return {k: int(v) if isinstance(v, (int, float)) else 0 for k, v in stats.items()}
+        except Exception as e:
+            print(f"Error getting production stats: {e}")
+            return {
+                'clips': 0,
+                'clippers': 0,
+                'mega_clippers': 0,
+                'production_rate': 0
+            }
 
     def run(self, episodes=1000, save_every=100, waiting_time=0.1):
         for i in range(episodes):
@@ -159,8 +185,10 @@ class ProductionManager(BaseQLearningManager):
                 self.save_q_table()
         self.save_q_table()
 
+
 class ResourceManager(BaseQLearningManager):
     """Manages resource purchases (Wire) using Q-Learning"""
+
     def __init__(self, button_manager, info_collector, **kwargs):
         self.possible_actions = [
             "btnBuyWire",
@@ -229,6 +257,29 @@ class ResourceManager(BaseQLearningManager):
             return True
         return self.button_manager.click_button_by_id(action)
 
+    def get_resource_stats(self):
+        """Returns current resource statistics for GUI display."""
+        try:
+            wire = self.info_collector.get_wire_count()
+            funds = self.info_collector.get_funds()
+            wire_cost = self.info_collector.get_wire_cost()
+
+            return {
+                'wire': int(wire) if wire else 0,
+                'funds': int(funds) if funds else 0,
+                'wire_cost': int(wire_cost) if wire_cost else 0,
+                'funds_to_wire_ratio': int(funds // (wire_cost + 0.1)) if wire_cost and funds else 0
+            }
+        except Exception as e:
+            print(f"Error getting resource stats: {e}")
+            return {
+                'wire': 0,
+                'funds': 0,
+                'wire_cost': 0,
+                'funds_to_wire_ratio': 0
+            }
+
+
     def run(self, episodes=1, save_every=100, waiting_time=0.1):
         """Runs the resource management optimization loop."""
         for i in range(episodes):
@@ -245,8 +296,10 @@ class ResourceManager(BaseQLearningManager):
                 self.save_q_table()
         return True
 
+
 class PriceManager(BaseQLearningManager):
     """Manages price adjustments using Q-Learning"""
+
     def __init__(self, button_manager, info_collector, **kwargs):
         self.possible_actions = [
             "btnRaisePrice",
@@ -298,7 +351,7 @@ class PriceManager(BaseQLearningManager):
 
         # Reward for high demand
         if isinstance(demand, (int, float)):
-            reward = (demand-50) /10
+            reward = (demand - 50) / 10
 
         # Reward for increasing funds
         if len(self.price_history) >= 2:
@@ -312,6 +365,33 @@ class PriceManager(BaseQLearningManager):
         if action == "wait":
             return True
         return self.button_manager.click_button_by_id(action)
+
+    def get_price_stats(self):
+        """Returns current price management statistics for GUI display."""
+        try:
+            # Get price (may need to adapt based on actual game element IDs)
+            price= self.info_collector.get_paperclip_price()
+
+            # Get demand (adapt based on actual game)
+            demand = self.info_collector.get_paperclip_demand()
+
+            # Get unsold clips
+            unsold_clips = self.info_collector.get_unsold_clips()
+
+            return {
+                'price': float(price) if price else 0.0,
+                'demand': float(demand) if demand else 0.0,
+                'unsold': int(unsold_clips) if unsold_clips else 0,
+                'demand_level': "High" if demand > 0.7 else "Medium" if demand > 0.4 else "Low"
+            }
+        except Exception as e:
+            print(f"Error getting price stats: {e}")
+            return {
+                'price': 0.0,
+                'demand': 0.0,
+                'unsold': 0,
+                'demand_level': "Unknown"
+            }
 
     def run(self, episodes=1, save_every=100, waiting_time=0.1):
         """Runs the price management optimization loop."""
@@ -329,12 +409,19 @@ class PriceManager(BaseQLearningManager):
                 self.save_q_table()
         return True
 
+
 class PaperclipsOptimizer:
     """Main class to coordinate the three managers"""
+
     def __init__(self, button_manager, info_collector):
         self.production_manager = ProductionManager(button_manager, info_collector)
         self.resource_manager = ResourceManager(button_manager, info_collector)
         self.price_manager = PriceManager(button_manager, info_collector)
+
+    def run_with_gui(self):
+        """Run the optimizer with GUI visualization"""
+        gui = PaperclipsGUI(self)
+        gui.run()
 
     def run(self, episodes=1000):
         """Runs the optimization loop for all managers"""
@@ -347,6 +434,7 @@ class PaperclipsOptimizer:
             # Print progress
             if (i + 1) % 100 == 0:
                 print(f"Episode {i + 1}/{episodes} completed")
+
 
 def main():
     from buttonManager import PaperclipsButtonManager
@@ -362,14 +450,19 @@ def main():
     optimizer = PaperclipsOptimizer(button_manager, info_collector)
 
     try:
-        optimizer.run(episodes=1000)
+        # Run with GUI
+        optimizer.run_with_gui()
     except KeyboardInterrupt:
         print("Manual stop, saving Q-tables...")
         optimizer.production_manager.save_q_table()
         optimizer.resource_manager.save_q_table()
         optimizer.price_manager.save_q_table()
+    except Exception as e:
+        print(f"Error: {e}")
     finally:
         driver.quit()
+
+
 
 if __name__ == "__main__":
     main()
