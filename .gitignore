@@ -29,7 +29,6 @@ ENV/
 Pipfile.lock
 
 # Project-specific data or cache directories
-data/
 cache/
 *.db
 
