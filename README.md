@@ -1,2 +1,2 @@
-# poc of the use of the q learning alorithm for the universal paper clip game
+# poc of the q learning algorithm for the universal paper clip game
 
