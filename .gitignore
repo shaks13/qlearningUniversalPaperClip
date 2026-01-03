@@ -30,6 +30,7 @@ Pipfile.lock
 
 # Project-specific data or cache directories
 cache/
+data/
 *.db
 
 # PyCharm-specific files and directories
