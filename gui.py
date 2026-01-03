@@ -306,3 +306,33 @@ class PaperclipsGUI:
     def run(self):
         """Start the GUI main loop"""
         self.root.mainloop()
+
+def main():
+    from qLearningOptimiser import PaperclipsOptimizer
+    from buttonManager import PaperclipsButtonManager
+    from infoCollector import PaperclipsInfoCollector
+    from selenium import webdriver
+
+    # Initialization
+    driver = webdriver.Chrome()
+    driver.get("https://www.decisionproblem.com/paperclips/index2.html")
+
+    button_manager = PaperclipsButtonManager(driver)
+    info_collector = PaperclipsInfoCollector(driver)
+    optimizer = PaperclipsOptimizer(button_manager, info_collector)
+
+    try:
+        # Run with GUI
+        optimizer.run_with_gui()
+    except KeyboardInterrupt:
+        print("Manual stop, saving Q-tables...")
+        optimizer.production_manager.save_q_table()
+        optimizer.resource_manager.save_q_table()
+        optimizer.price_manager.save_q_table()
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        driver.quit()
+
+if __name__ == "__main__":
+    main()

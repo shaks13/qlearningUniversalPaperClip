@@ -450,19 +450,14 @@ def main():
     optimizer = PaperclipsOptimizer(button_manager, info_collector)
 
     try:
-        # Run with GUI
-        optimizer.run_with_gui()
+        optimizer.run(episodes=1000)
     except KeyboardInterrupt:
         print("Manual stop, saving Q-tables...")
         optimizer.production_manager.save_q_table()
         optimizer.resource_manager.save_q_table()
         optimizer.price_manager.save_q_table()
-    except Exception as e:
-        print(f"Error: {e}")
     finally:
         driver.quit()
-
-
 
 if __name__ == "__main__":
     main()
