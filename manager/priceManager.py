@@ -112,3 +112,10 @@ class PriceManager(BaseQLearningManager):
             if (i + 1) % save_every == 0:
                 self.save_q_table()
         return True
+
+def main ():
+    price_smgmt = PriceManager
+
+if __name__ == "__main__":
+    main()
+

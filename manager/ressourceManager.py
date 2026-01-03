@@ -111,3 +111,10 @@ class ResourceManager(BaseQLearningManager):
             if (i + 1) % save_every == 0:
                 self.save_q_table()
         return True
+
+def main ():
+    res_mgmt = ResourceManager
+
+if __name__ == "__main__":
+    main()
+
